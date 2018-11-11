@@ -1,0 +1,188 @@
+﻿@model Ezekiel.Models.ModelParameters
+
+@{
+    ViewBag.Title = Model.PageName;
+}
+
+<h2>@Model.PageName</h2>
+<h4 style="font-size:15px;">@Model.Info</h4>
+<div id="chartContainer"></div>
+<div class="container">
+    <table class="table table-bordered table-striped table-responsive" border="1" cellspacing="0" id="dataTable">
+        <thead>
+            <tr id="mainHeader"></tr>
+        </thead>
+        <tbody class="tbody"></tbody>
+        <tfoot id="footer">
+            <tr id="tfooter"></tr>
+        </tfoot>
+    </table>
+</div>
+<style>
+    .buttons-excel {
+        background-color:rgb(138, 201, 254);
+    }
+
+    #mainHeader > th {
+        background-color:rgb(138, 201, 254);
+    }
+</style>
+@section Scripts{
+<script type="text/javascript">
+    var globalData;
+    var gChartData;
+    var dataTable;
+    var highChart;
+    var totalAmount = 0;
+
+    $(function () {
+        getChartData();
+        getData();
+    });
+
+    function getChartData() {
+        $.when($.ajax({
+            type: "GET",
+            url: '@Url.Action("GetChartData")',
+            dataSrc: "",
+            dataType: "json",
+            contentType: "application/json"
+        })).done(function (data) {
+            gChartData = data;
+            renderChart(data);
+        });
+    }
+
+    function getData() {
+        $.when($.ajax({
+            type: "GET",
+            url: '@Url.Action("GetData")',
+            dataSrc: "",
+            dataType: "json",
+            contentType: "application/json"
+        })).done(function (data) {
+            globalData = data;
+            createHeaders();
+            renderData(data);
+        });
+    }
+
+    function createHeaders() {
+        $('#mainHeader').append('<th>Date</th>');
+        $('#mainHeader').append('<th>Amount Logged</th>');
+        $('#mainHeader').append('<th>Message Log</th>');
+    }
+
+    function renderData(data) {
+        dataTable = $('#dataTable').DataTable({
+            autoWidth: true,
+            destroy: true,
+            dom: 'frBtlip',
+            stateSave: true,
+            buttons: [{
+                extend: 'excelHtml5',
+                footer: true,
+                text: 'Export Logs'
+            }],
+            //"rowCallBack": function (row, data, index) {
+            //    $(row).find('td:eq(' + 1 + ')').css('background-color', 'limegreen');
+            //},
+            //"footerCallBack": function (tfoot, data, start, end, display) {
+            //    let api = this.api();
+
+            //    $(api.column(1).footer()).html(
+            //        api.column(1, { page: 'current' }).data().reduce(function (a, b) {
+            //            return parseFloat(a) + parseFloat(b);
+            //        }, 0)
+            //    );
+            //}
+        });
+
+        dataTable.clear().draw();
+
+        let row = {
+            data:[]
+        }
+
+        let rowNode = null;
+
+        for (let i = 0; i < data.length; i++) {
+            row.data.push(moment(data[i].DateTime).format(longDateTime));
+            row.data.push(data[i].Amount);
+            row.data.push(data[i].MessageLog);
+
+            totalAmount += parseFloat(data[i].Amount);
+
+            rowNode = dataTable.row.add(row.data);
+            row.data = [];
+        }
+        dataTable.draw(rowNode);
+
+        $('#tfooter').append('<th>Total:</th>');
+        $('#tfooter').append('<th>' + totalAmount + '</th> <th></th>');
+    }
+
+    let dataChart = [];
+
+    function renderChart(data) {
+        let chart = new Highcharts.Chart(highChart);
+        for (let i = 0; i < data.length; i++) {
+            dataChart.push([
+                moment(data[i].Date).format(shortDateTime),
+                (i > 0 ? dataChart[i - 1][1] + data[i].Amount : data[i].Amount)
+            ])
+        }
+        chart.addSeries({
+            name: 'Logs',
+            //_colorIndex: 2,
+            color: '#FF0000',
+            data: dataChart,
+            dataLabels: {
+                enabled: true,
+                align: 'center',
+                color: '#FFFFFF',
+                align: 'right',
+                format: '₱{point.y:.2f}',
+                y: 10,
+                style: {
+                    fontSize: '13px',
+                    fontFamily: 'Verdana, sans-serif'
+                }
+            }
+        }, false);
+        chart.redraw();
+    }
+
+    highChart = {
+        chart: {
+            type: 'spline',
+            renderTo: 'chartContainer'
+        },
+        title: {
+            text: 'Total Amount Chart'
+        },
+        subtitle: {
+            text: 'Displays the total amount earned based on given date'
+        },
+        tooltip: {
+            valuePrefix: '₱',
+            format: '₱{point.y:.2f}',
+        },
+        xAxis: {
+            type: 'category'
+        },
+        yAxis: {
+            title: {
+                text: 'Total Amount (₱)'
+            }
+        },
+        legend: {
+            enabled: false
+        },
+        credits: {
+            enabled: false
+        },
+        series: []
+    };
+</script>
+}

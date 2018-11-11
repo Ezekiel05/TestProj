@@ -1,0 +1,60 @@
+﻿@model Ezekiel.Models.ModelParameters
+
+@{
+    ViewBag.Title = Model.PageName;
+}
+
+<h2>@Model.PageName</h2>
+<h4 style="font-size:15px;">@Model.Info</h4>
+<div id="chartContainer"></div>
+<div class="container">
+    <div>
+        <label>Amount: <input type="number" class="form-control" id="amount" placeholder="Insert Amount" /></label>
+    </div>
+    <div>
+        <label>Message Log:<input type="text" class="form-control" id="message" placeholder="Insert Message" /></label>
+    </div>
+    <div>
+        <button type="submit" class="btn btn-success" id="submit">Submit Log</button>
+    </div>
+    <div id="Message"></div>
+</div>
+@section Scripts{
+<script type="text/javascript">
+    var globalData;
+    var dataTable;
+    var highChart;
+
+    $('#submit').on('click', function () {
+        let amountVal = $('#amount').val();
+        let messageLogged = $('#message').val();
+        logAmount(moment(new Date()).format(longDateTime), amountVal, messageLogged, moment(new Date()).format(shortDateTime));
+    });
+
+    function logAmount(dateTime, amount, messageLog, date) {
+        $.when($.ajax({
+            type: "GET",
+            url: '@Url.Action("LogAmount")',
+            data: {
+                "dateTime": dateTime,
+                "amount": amount,
+                "messageLog": messageLog,
+                "date": date
+            },
+            dataSrc: "",
+            dataType: "json",
+            contentType: "application/json"
+        })).done(function (data) {
+            globalData = data;
+            $('#amount').val('');
+            $('#message').val('');
+            $('#Message').html('');
+            $('#Message').append('<br><b>Successfully Logged:</b>');
+            $('#Message').append('<br>&nbsp;&nbsp;&nbsp;&nbsp; Log Id: ' + data[0].Id);
+            $('#Message').append('<br>&nbsp;&nbsp;&nbsp;&nbsp; Date: ' + moment(data[0].DateTime).format(longDateTime));
+            $('#Message').append('<br>&nbsp;&nbsp;&nbsp;&nbsp; Amount: ' + data[0].Amount);
+            $('#Message').append('<br>&nbsp;&nbsp;&nbsp;&nbsp; Message: ' + data[0].MessageLog);
+        });
+    }
+</script>
+}
