@@ -47,7 +47,7 @@ namespace Ezekiel.Controllers
                 {
                     Date = group.Key,
                     Amount = group.Sum(a => a.Amount)
-                }).ToList();
+                }).OrderBy(o => o.Date).ToList();
 
             return new JsonResult
             {
